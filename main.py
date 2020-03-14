@@ -1,5 +1,4 @@
 import math
-import os
 
 import pygame
 from pygame.rect import Rect
@@ -16,6 +15,9 @@ from Towers.BananaWarrior import BananaWarrior
 # print(user32.GetSystemMetrics(0), user32.GetSystemMetrics(1))
 
 # Window + loop
+from Level import Level
+
+
 class Game:
     def __init__(self):
         self.window = pygame.display.set_mode(flags=pygame.FULLSCREEN)
@@ -36,7 +38,7 @@ class Game:
             pygame.display.set_caption("Bloons TD 7 - %s" % self.update_fps())
             self.window.blit(self.update_fps(), (10, 0))
             pygame.display.flip()
-            self.clock.tick(100)
+            self.clock.tick(500)
         pygame.quit()
 
     def update_fps(self):
@@ -58,14 +60,14 @@ class GameLogic:
         # projectileliste
         self.projectiles = []
         # wellen
-        self.wave = Wave(0)
+        self.level = Level.from_file("res/level/level_1.json")
         # ui liste
         self.ui_elements = [
             Button(1620, 950, 280, 50, (107, 142, 35), (34, 139, 34), "Start", self.set_spawn_true),
             Button(1620, 1020, 280, 50, (205, 92, 92), (178, 34, 34), "Exit", exit),
             Label(1620, 10, (255, 0, 0), "Lifepoints: ", self.player),
             Label(1620, 60, (255, 0, 0), "Money: ", self.player),
-            Label(1620, 110, (255, 0, 0), "Wave: ", self.wave.wave),
+            Label(1620, 110, (255, 0, 0), "Wave: ", self.level.curr_wave),
             Image(1870, 20, "res\pictures\heart.png"),
             Image(1870, 70, "res\pictures\money.png"),
         ]
@@ -89,6 +91,8 @@ class GameLogic:
                 self.pressdown_right()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 exit(-1)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                self.set_spawn_true()
 
     def draw(self, window):
         self.draw_grid(window)
@@ -100,11 +104,11 @@ class GameLogic:
     def draw_grid(self, window):
         for coordinate, cell in self.grid.items():
             x, y = coordinate
-            pygame.draw.rect(window, cell.colour, Rect(x * cell.width, y * cell.height, cell.width, cell.height))
+            #pygame.draw.rect(window, cell.colour, Rect(x * cell.width, y * cell.height, cell.width, cell.height))
             if isinstance(self.grid[x, y], WayCell):
                 self.grid[x, y].drawway(window)
-            # else:
-            #    self.grid[x, y].drawcell(window)
+            else:
+                self.grid[x, y].drawcell(window)
 
     def draw_menu(self, window):
         pygame.draw.rect(window, (176, 224, 230), Rect(1600, 0, 320, 1080))
@@ -135,9 +139,9 @@ class GameLogic:
         to_remove_bloons = []
         to_remove_projectiles = []
 
-        self.wave.update(self.bloons)
+        self.level.update(self.bloons)
 
-        # bloon out of disolay
+        # bloon out of display
         for bloon in self.bloons:
             bloon.update(self.grid)
             if (bloon.posx, bloon.posy) not in self.grid:
@@ -189,7 +193,7 @@ class GameLogic:
 
         for ui_element in self.ui_elements:
             if isinstance(ui_element, Label):
-                ui_element.update(self.player, self.wave)
+                ui_element.update(self.player, self.level)
             elif isinstance(ui_element, Button):
                 ui_element.update(pygame.mouse.get_pos())
 
@@ -232,105 +236,11 @@ class GameLogic:
                 button.execute()
 
     def set_spawn_true(self):
-        self.wave.spawn = True
+        self.level.spawn = True
 
     def pressdown_right(self):
         for market in self.shops:
             market.stick = False
-
-
-# Gegnerklasse
-class Redbloon:
-    def __init__(self, cellsize, x, y, health):
-        self.progressx = 0
-        self.progressy = 0
-        self.cellsize = cellsize
-        self.posx = x
-        self.posy = y
-        self.speed = [1 / 30, 1 / 15]
-        self.value = 1
-        self.health = int(health)
-        self.bloonimages = [
-            pygame.image.load('res/pictures/redbloon.png'),
-            pygame.image.load('res/pictures/bluebloon.png')
-        ]
-
-    def update(self, grid):
-        if (self.posx, self.posy) not in grid:
-            return
-        nposx, nposy = grid[math.floor(self.posx), math.floor(self.posy)].next
-
-        # oben
-        if self.posx == nposx and self.posy - self.progressy >= nposy:
-            if (self.progressy - self.speed[self.health - 1]) > (-1):
-                self.progressy -= self.speed[self.health - 1]
-            else:
-                self.posy -= 1
-                self.progressy = 0
-        # rechts
-        elif self.posx + self.progressx <= nposx and self.posy == nposy:
-            if (self.progressx + self.speed[self.health - 1]) < 1:
-                self.progressx += self.speed[self.health - 1]
-            else:
-                self.posx += 1
-                self.progressx = 0
-        # unten
-        elif self.posx == nposx and self.posy + self.progressy <= nposy:
-            if (self.progressy + self.speed[self.health - 1]) < 1:
-                self.progressy += self.speed[self.health - 1]
-            else:
-                self.posy += 1
-                self.progressy = 0
-        # links
-        elif self.posx - self.progressx >= nposx and self.posy == nposy:
-            if (self.progressx - self.speed[self.health - 1]) > -1:
-                self.progressx -= self.speed[self.health - 1]
-            else:
-                self.posx -= 1
-                self.progressx = 0
-        else:
-            assert "Fehler no direction"
-            print("posx %s, posy %s, progx %s progy %s" % (self.posx, self.posy, self.progressx, self.progressy))
-
-    def draw(self, window):
-        window.blit(self.bloonimages[self.health - 1],
-                    ((self.posx + self.progressx) * self.cellsize, (self.posy + self.progressy) * self.cellsize))
-
-
-# wellen
-class Wave:
-    def __init__(self, start_wave):
-        self.spawn = False
-        self.now = 0
-        self.wave = start_wave
-        self.waves = dict()
-        for wave in range(Wave.wave_count()):
-            to_appand = []
-            self.file = open("res/waves/wave" + str(wave), "r")
-            for line in self.file:
-                to_appand.append(line.split())
-            self.waves[wave] = to_appand
-
-    def update(self, bloons):
-        if self.now == int(self.waves[self.wave][0][1]) and self.spawn:
-            bloon_kind = self.waves[self.wave][0][0]
-            if bloon_kind == "Redbloon":
-                bloons.append(Redbloon(32, 0, 10, self.waves[self.wave][0][2]))
-                self.waves[self.wave].pop(0)
-            elif bloon_kind == "End":
-                self.spawn = False
-        if not self.spawn and self.now > 0 and self.wave < Wave.wave_count():
-            self.wave += 1
-            self.now = 0
-        if self.spawn:
-            self.now += 1
-        elif self.wave == Wave.wave_count():
-            print("hast je wonnen")
-
-    @staticmethod
-    def wave_count():
-        return len(os.listdir('./res/waves/'))
-
 
 class Bananamarket:
     def __init__(self, posx, posy):

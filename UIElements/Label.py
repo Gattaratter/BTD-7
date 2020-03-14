@@ -14,10 +14,10 @@ class Label(UIElement):
     def draw(self, window):
         window.blit(self.label, (self.posx, self.posy))
 
-    def update(self, player, wave):
+    def update(self, player, level):
         if self.text == "Lifepoints: ":
             self.label = self.font.render(self.text + str(player.lifepoints), False, self.colour)
         elif self.text == "Money: ":
             self.label = self.font.render(self.text + str(player.money) + "$", False, self.colour)
         elif self.text == "Wave: ":
-            self.label = self.font.render(self.text + str(wave.wave), False, self.colour)
+            self.label = self.font.render(self.text + str(level.curr_wave), False, self.colour)

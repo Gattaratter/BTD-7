@@ -1,0 +1,37 @@
+{
+  "forbidden_towers": [
+
+  ],
+  "waves": {
+    "1": [
+      {"type": "RedBloon", "spawn_time": 10},
+      {"type": "RedBloon", "spawn_time": 20},
+      {"type": "RedBloon", "spawn_time": 30},
+      {"type": "RedBloon", "spawn_time": 40},
+      {"type": "BlueBloon", "spawn_time": 75},
+      {"type": "BlueBloon", "spawn_time": 80},
+      {"type": "GreenBloon", "spawn_time": 100},
+      {"type": "YellowBloon", "spawn_time": 110}
+    ],
+    "2": [
+      {"type": "RedBloon", "spawn_time": 10},
+      {"type": "RedBloon", "spawn_time": 20},
+      {"type": "RedBloon", "spawn_time": 30},
+      {"type": "RedBloon", "spawn_time": 40},
+      {"type": "BlueBloon", "spawn_time": 75},
+      {"type": "BlueBloon", "spawn_time": 80},
+      {"type": "GreenBloon", "spawn_time": 100},
+      {"type": "YellowBloon", "spawn_time": 110}
+    ],
+    "3": [
+      {"type": "YellowBloon", "spawn_time": 5},
+      {"type": "YellowBloon", "spawn_time": 40},
+      {"type": "RedBloon", "spawn_time": 30},
+      {"type": "RedBloon", "spawn_time": 40},
+      {"type": "BlueBloon", "spawn_time": 75},
+      {"type": "BlueBloon", "spawn_time": 80},
+      {"type": "GreenBloon", "spawn_time": 100},
+      {"type": "YellowBloon", "spawn_time": 110}
+    ]
+  }
+}
