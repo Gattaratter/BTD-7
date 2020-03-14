@@ -4,16 +4,13 @@ import os
 import pygame
 from pygame.rect import Rect
 
+from MapLoader import MapLoader
 from Player import Player
 from UIElements.Image import Image
 from UIElements.Button import Button
 from UIElements.Label import Label
 from MapElements.WayCell import WayCell
-from MapElements.MapCell import MapCell
 from Towers.BananaWarrior import BananaWarrior
-
-pygame.init()
-
 
 # user32 = ctypes.windll.user32
 # print(user32.GetSystemMetrics(0), user32.GetSystemMetrics(1))
@@ -22,8 +19,9 @@ pygame.init()
 class Game:
     def __init__(self):
         self.window = pygame.display.set_mode(flags=pygame.FULLSCREEN)
-        pygame.display.set_caption("Bloons TD 7")
-        icon = pygame.image.load('pictures/bloon.png')
+        self.title = "Bloons TD 7"
+        pygame.display.set_caption(self.title)
+        icon = pygame.image.load('res/pictures/bloon.png')
         pygame.display.set_icon(icon)
         self.clock = pygame.time.Clock()
 
@@ -32,18 +30,10 @@ class Game:
 
         glogic = GameLogic()
         while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left = 1
-                    glogic.pressdown_left()
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # Right = 3
-                    glogic.pressdown_right()
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    exit(-1)
-
+            glogic.handle_input()
             glogic.update()
             glogic.draw(self.window)
+            pygame.display.set_caption("Bloons TD 7 - %s" % self.update_fps())
             self.window.blit(self.update_fps(), (10, 0))
             pygame.display.flip()
             self.clock.tick(100)
@@ -76,8 +66,8 @@ class GameLogic:
             Label(1620, 10, (255, 0, 0), "Lifepoints: ", self.player),
             Label(1620, 60, (255, 0, 0), "Money: ", self.player),
             Label(1620, 110, (255, 0, 0), "Wave: ", self.wave.wave),
-            Image(1870, 20, "pictures\heart.png"),
-            Image(1870, 70, "pictures\money.png"),
+            Image(1870, 20, "res\pictures\heart.png"),
+            Image(1870, 70, "res\pictures\money.png"),
         ]
 
         # market
@@ -87,41 +77,27 @@ class GameLogic:
         # später in menu class
         self.font = pygame.font.SysFont('monospace', 30)
         # grid
-        self.grid = dict()
-        for x in range(0, int(50)):  # 1600 pixel
-            for y in range(0, int(34)):
-                if y == 10 and x == 30:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x - 1, y), (x, y + 1))
-                elif 10 < y < 20 and x == 30:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x, y - 1), (x, y + 1))
-                elif y == 20 and x == 30:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x, y - 1), (x + 1, y))
-                elif y == 20 and 30 < x < 40:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x - 1, y), (x + 1, y))
-                elif y == 20 and x == 40:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x - 1, y), (x, y - 1))
-                elif 10 < y < 20 and x == 40:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x, y + 1), (x, y - 1))
-                elif y == 10 and x == 40:
-                    self.grid[(x, y)] = WayCell(32, (x, y), (x, y + 1), (x + 1, y))
-                elif y == 10 and (x > 40 or x < 30):
-                    if x < 0:
-                        self.grid[(x, y)] = WayCell(32, (x, y), (None, y), (x + 1, y))
-                    elif x >= 60:
-                        self.grid[(x, y)] = WayCell(32, (x, y), (x - 1, y), (None, y))
-                    else:
-                        self.grid[(x, y)] = WayCell(32, (x, y), (x - 1, y), (x + 1, y))
-                else:
-                    self.grid[(x, y)] = MapCell(32, (x, y), (x * 2, y * 2, x + y))
+        self.grid = MapLoader.zwerg_101()
+
+    def handle_input(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left = 1
+                self.pressdown_left()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # Right = 3
+                self.pressdown_right()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                exit(-1)
 
     def draw(self, window):
-        self.drawgrid(window)
-        self.drawtowers(window)
-        self.drawbloon(window)
-        self.drawprojectile(window)
-        self.drawmenu(window)
+        self.draw_grid(window)
+        self.draw_towers(window)
+        self.draw_bloons(window)
+        self.draw_projectiles(window)
+        self.draw_menu(window)
 
-    def drawgrid(self, window):
+    def draw_grid(self, window):
         for coordinate, cell in self.grid.items():
             x, y = coordinate
             pygame.draw.rect(window, cell.colour, Rect(x * cell.width, y * cell.height, cell.width, cell.height))
@@ -130,29 +106,29 @@ class GameLogic:
             # else:
             #    self.grid[x, y].drawcell(window)
 
-    def drawmenu(self, window):
+    def draw_menu(self, window):
         pygame.draw.rect(window, (176, 224, 230), Rect(1600, 0, 320, 1080))
         pygame.draw.rect(window, (238, 203, 173), Rect(1610, 150, 300, 925))
         for ui_element in self.ui_elements:
             ui_element.draw(window)
         for market in self.shops:
-            market.drawmarket(window)
+            market.draw(window)
             for market in self.shops:
                 if market.stick:
                     window.blit(market.towerimage,
                                 (math.floor(self.mouse[0] / 32) * 32, math.floor(self.mouse[1] / 32) * 32))
 
-    def drawtowers(self, window):
+    def draw_towers(self, window):
         for tower in self.towers:
             tower.draw(window)
 
-    def drawbloon(self, window):
+    def draw_bloons(self, window):
         for bloon in self.bloons:
-            bloon.drawbloon(window)
+            bloon.draw(window)
 
-    def drawprojectile(self, window):
+    def draw_projectiles(self, window):
         for projectile in self.projectiles:
-            projectile.drawprojectile(window)
+            projectile.draw(window)
 
     def update(self):
         self.mouse = pygame.mouse.get_pos()
@@ -227,12 +203,10 @@ class GameLogic:
     def is_tower_possible_to_place(self, pos):
         for shop in self.shops:
             if shop.stick and pos[0] < 1568 and pos[1] < 1056:
-                print("ja")
                 for tower in self.towers:
                     diffx = math.floor(pos[0] / 32) - tower.posx
                     diffy = math.floor(pos[1] / 32) - tower.posy
                     if -shop.towersize < diffx < shop.towersize and -shop.towersize < diffy < shop.towersize:
-                        print(0)
                         break
                 for coordinates, cell in self.grid.items():
                     if isinstance(cell, WayCell):
@@ -241,17 +215,12 @@ class GameLogic:
                         if math.floor(pos[0] / 32) >= cell.posx \
                                 and math.floor(pos[1] / 32) >= cell.posy:
                             if -1 < diffx < 1 and -1 < diffy < 1:
-                                print(1)
                                 break
                         if math.floor(pos[0] / 32) <= cell.posx \
                                 and math.floor(pos[1] / 32) <= cell.posy:
                             if -2 < diffx < 2 and -2 < diffy < 2:
-                                print(2)
                                 break
-                print(3)
                 self.towers.append(BananaWarrior(math.floor(pos[0] / 32), math.floor(pos[1] / 32)))
-                print("towers:")
-                print(self.towers)
                 shop.stick = False
                 self.player.money -= shop.price
             if shop.collidepoint(pos) and not shop.stick:
@@ -270,7 +239,6 @@ class GameLogic:
             market.stick = False
 
 
-
 # Gegnerklasse
 class Redbloon:
     def __init__(self, cellsize, x, y, health):
@@ -282,7 +250,10 @@ class Redbloon:
         self.speed = [1 / 30, 1 / 15]
         self.value = 1
         self.health = int(health)
-        self.bloonimages = [pygame.image.load('pictures/redbloon.png'), pygame.image.load('pictures/bluebloon.png')]
+        self.bloonimages = [
+            pygame.image.load('res/pictures/redbloon.png'),
+            pygame.image.load('res/pictures/bluebloon.png')
+        ]
 
     def update(self, grid):
         if (self.posx, self.posy) not in grid:
@@ -321,7 +292,7 @@ class Redbloon:
             assert "Fehler no direction"
             print("posx %s, posy %s, progx %s progy %s" % (self.posx, self.posy, self.progressx, self.progressy))
 
-    def drawbloon(self, window):
+    def draw(self, window):
         window.blit(self.bloonimages[self.health - 1],
                     ((self.posx + self.progressx) * self.cellsize, (self.posy + self.progressy) * self.cellsize))
 
@@ -335,7 +306,7 @@ class Wave:
         self.waves = dict()
         for wave in range(Wave.wave_count()):
             to_appand = []
-            self.file = open("waves/wave" + str(wave), "r")
+            self.file = open("res/waves/wave" + str(wave), "r")
             for line in self.file:
                 to_appand.append(line.split())
             self.waves[wave] = to_appand
@@ -358,16 +329,16 @@ class Wave:
 
     @staticmethod
     def wave_count():
-        return len(os.listdir('./waves/'))
+        return len(os.listdir('./res/waves/'))
 
 
 class Bananamarket:
     def __init__(self, posx, posy):
         self.towersize = 2
         self.cellsize = 32
-        self.towerimage = pygame.image.load('pictures/bananawarrior.png')
+        self.towerimage = pygame.image.load('res/pictures/bananawarrior.png')
         self.stick = False
-        self.marketimage = pygame.image.load('pictures/banana.png')
+        self.marketimage = pygame.image.load('res/pictures/banana.png')
         self.posx = posx
         self.posy = posy
         self.width = 64
@@ -384,7 +355,7 @@ class Bananamarket:
         else:
             self.colour = self.originally_colour
 
-    def drawmarket(self, window):
+    def draw(self, window):
         pygame.draw.rect(window, self.colour, self.rect)
         window.blit(self.marketimage, (self.posx, self.posy))
 
@@ -400,6 +371,7 @@ class Bananamarket:
             self.stick = True
 
 
-# if __name__ == '__main__':
-game = Game()
-game.run()
+if __name__ == '__main__':
+    pygame.init()
+    game = Game()
+    game.run()

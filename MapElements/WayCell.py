@@ -8,9 +8,9 @@ class WayCell(MapCell):
         super().__init__(size, pos, (205, 133, 63))
         self.previouscell = previous
         self.next = next
-        self.image_grade_vertikal = pygame.image.load('pictures/grade.png')
+        self.image_grade_vertikal = pygame.image.load('res/pictures/grade.png')
         self.image_grade_horizontal = pygame.transform.rotate(self.image_grade_vertikal, 90)
-        self.image_hoch_rechts = pygame.image.load('pictures/rechts.png')
+        self.image_hoch_rechts = pygame.image.load('res/pictures/rechts.png')
         self.image_rechts_runter = pygame.transform.rotate(self.image_hoch_rechts, -90)
         self.image_runter_links = pygame.transform.rotate(self.image_hoch_rechts, -180)  # rechts-hoch
         self.image_links_hoch = pygame.transform.rotate(self.image_hoch_rechts, -270)  # runter-rechts

@@ -36,7 +36,7 @@ class Projectile:
             self.rot_image = pygame.transform.rotate(self.projectile_image,
                                                      self.angle + (math.atan(self.dposx / self.dposy) * 180 / math.pi))
 
-    def drawprojectile(self, window):
+    def draw(self, window):
         window.blit(self.rot_image, (
             (self.posx + self.towersize / 2) * 32, (self.posy + self.towersize / 2) * 32))
 
