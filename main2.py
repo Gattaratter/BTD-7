@@ -1,10 +1,15 @@
-import math, ctypes
+import math
 
 import pygame
 from pygame.rect import Rect
-import objects as obj
+from pygame.tests.ftfont_test import obj
+
+from UIElements.Image import Image
+from UIElements.Button import Button
+from UIElements.Label import Label
 
 pygame.init()
+
 
 # user32 = ctypes.windll.user32
 # print(user32.GetSystemMetrics(0), user32.GetSystemMetrics(1))
@@ -44,6 +49,7 @@ class Game:
         self.fps_text = font.render(self.fps, 1, pygame.Color("coral"))
         return self.fps_text
 
+
 # updaten + Zeichnen
 class GameLogic:
     def __init__(self):
@@ -57,17 +63,19 @@ class GameLogic:
         self.projectiles = []
         # wellen
         self.wave = Wave(0)
-        # bottonliste
-        self.buttons = [Button(1620, 950, 280, 50, (107, 142, 35), (34, 139, 34), "Start"),
-                        Button(1620, 1020, 280, 50, (205, 92, 92), (178, 34, 34), "Exit")]
-        # labelliste
-        self.labels = [Label(1620, 10, (255, 0, 0), "Lifepoints: ", self.player),
-                       Label(1620, 60, (255, 0, 0), "Money: ", self.player),
-                       Label(1620, 110, (255, 0, 0), "Wave: ", self.wave.wave)]
-        #uiobjects kiste
-        self.uiobjects = [obj.UiObjects(1870, 20, "heart"), obj.UiObjects(1870, 70, "money")]
+        # ui liste
+        self.ui_elements = [
+            Button(1620, 950, 280, 50, (107, 142, 35), (34, 139, 34), "Start"),
+            Button(1620, 1020, 280, 50, (205, 92, 92), (178, 34, 34), "Exit"),
+            Label(1620, 10, (255, 0, 0), "Lifepoints: ", self.player),
+            Label(1620, 60, (255, 0, 0), "Money: ", self.player),
+            Label(1620, 110, (255, 0, 0), "Wave: ", self.wave.wave),
+            Image(1870, 20, "pictures\heart.png"),
+            Image(1870, 70, "pictures\money.png"),
+        ]
+
         # market
-        self.markets = [Bananamarket(1615, 155)]
+        self.shops = [Bananamarket(1615, 155)]
         # mouscoordinates
         self.mouse = pygame.mouse.get_pos()
         # später in menu class
@@ -100,28 +108,30 @@ class GameLogic:
                 else:
                     self.grid[(x, y)] = Cell(32, (x, y), (x * 2, y * 2, x + y))
 
+    def draw(self, window):
+        self.drawgrid(window)
+        self.drawtowers(window)
+        self.drawbloon(window)
+        self.drawprojectile(window)
+        self.drawmenu(window)
+
     def drawgrid(self, window):
         for coordinate, cell in self.grid.items():
             x, y = coordinate
             pygame.draw.rect(window, cell.colour, Rect(x * cell.width, y * cell.height, cell.width, cell.height))
             if self.grid[x, y].type == "way":
                 self.grid[x, y].drawway(window)
-            else:
-                self.grid[x, y].drawcell(window)
+            # else:
+            #    self.grid[x, y].drawcell(window)
 
     def drawmenu(self, window):
         pygame.draw.rect(window, (176, 224, 230), Rect(1600, 0, 320, 1080))
         pygame.draw.rect(window, (238, 203, 173), Rect(1610, 150, 300, 925))
-        for label in self.labels:
-            label.drawlabel(window)
-        for button in self.buttons:
-            button.drawbutton(window)
-        for uiobject in self.uiobjects:
-            uiobject.drawuiobject()
-
-        for market in self.markets:
+        for ui_element in self.ui_elements:
+            ui_element.draw(window)
+        for market in self.shops:
             market.drawmarket(window)
-            for market in self.markets:
+            for market in self.shops:
                 if market.stick == True:
                     window.blit(market.towerimage,
                                 (math.floor(self.mouse[0] / 32) * 32, math.floor(self.mouse[1] / 32) * 32))
@@ -162,7 +172,7 @@ class GameLogic:
         for projectile in to_remove_projectiles:
             self.projectiles.remove(projectile)
 
-        # kabumm
+        # kabumm !!!
         for projectile in self.projectiles:
             for bloon in self.bloons:
                 if math.sqrt(((projectile.posx + projectile.towersize / 2) - (bloon.posx + 1 / 2)) ** 2 + (
@@ -196,57 +206,55 @@ class GameLogic:
         for tower in self.towers:
             tower.update(self.bloons, self.projectiles)
 
-        for label in self.labels:
-            label.update(self.player, self.wave)
+        for ui_element in self.ui_elements:
+            if isinstance(ui_element, Label):
+                ui_element.update(self.player, self.wave)
+            elif isinstance(ui_element, Button):
+                ui_element.update(pygame.mouse.get_pos())
 
-        for button in self.buttons:
-            button.update(pygame.mouse.get_pos())
-
-        for market in self.markets:
+        for market in self.shops:
             market.update(pygame.mouse.get_pos())
 
-    def draw(self, window):
-        self.drawgrid(window)
-        self.drawtowers(window)
-        self.drawbloon(window)
-        self.drawprojectile(window)
-        self.drawmenu(window)
-
     def pressdown_left(self):
-        self.mouse = pygame.mouse.get_pos()
-        for button in self.buttons:
-            if button.collidepoint(self.mouse):
+        self.is_button_clicked(pygame.mouse.get_pos())
+        self.is_tower_possible_to_place(pygame.mouse.get_pos())
+
+    def is_tower_possible_to_place(self, pos):
+        for shop in self.shops:
+            if shop.stick and pos[0] < 1568 and pos[1] < 1056:
+                for tower in self.towers:
+                    diffx = math.floor(pos[0] / 32) - tower.posx
+                    diffy = math.floor(pos[1] / 32) - tower.posy
+                    if -shop.towersize < diffx < shop.towersize and -shop.towersize < diffy < shop.towersize:
+                        return
+                for coordinates, cell in self.grid.items():
+                    if isinstance(cell, Way):
+                        diffx = math.floor(pos[0] / 32) - cell.posx
+                        diffy = math.floor(pos[1] / 32) - cell.posy
+                        if math.floor(pos[0] / 32) >= cell.posx \
+                                and math.floor(pos[1] / 32) >= cell.posy:
+                            if -1 < diffx < 1 and -1 < diffy < 1:
+                                return
+                        if math.floor(pos[0] / 32) <= cell.posx \
+                                and math.floor(pos[1] / 32) <= cell.posy:
+                            if -2 < diffx < 2 and -2 < diffy < 2:
+                                return
+                self.towers.append(BananaTower(32, math.floor(pos[0] / 32), math.floor(pos[1] / 32)))
+                shop.stick = False
+                self.player.money -= shop.price
+            if shop.collidepoint(pos) and not shop.stick:
+                shop.buy(self.player)
+
+    def is_button_clicked(self, pos):
+        for button in filter(lambda ui_element: isinstance(ui_element, Button), self.ui_elements):
+            if button.collidepoint(pos):
                 if button.text == "Exit":
                     pygame.quit()
                 if button.text == "Start":
                     self.wave.spawn = True
 
-        #tower nicht auf speergebiet
-        for market in self.markets:
-            if market.stick and self.mouse[0] < 1568 and self.mouse[1] < 1056:
-                for tower in self.towers:
-                    diffx = math.floor(self.mouse[0] / 32) - tower.posx
-                    diffy = math.floor(self.mouse[1] / 32) - tower.posy
-                    if -market.towersize < diffx < market.towersize and -market.towersize < diffy < market.towersize:
-                        return
-                for cell in self.grid:
-                    if self.grid[cell].type == "way":
-                        diffx = math.floor(self.mouse[0] / 32) - self.grid[cell].posx
-                        diffy = math.floor(self.mouse[1] / 32) - self.grid[cell].posy
-                        if math.floor(self.mouse[0] / 32) >= self.grid[cell].posx and math.floor(self.mouse[1] / 32) >= self.grid[cell].posy:
-                            if -1 < diffx < 1 and -1 < diffy < 1:
-                                return
-                        if math.floor(self.mouse[0] / 32) <= self.grid[cell].posx and math.floor(self.mouse[1] / 32) <= self.grid[cell].posy:
-                            if -2 < diffx < 2 and -2 < diffy < 2:
-                                return
-                self.towers.append(BananaTower(32, math.floor(self.mouse[0] / 32), math.floor(self.mouse[1] / 32)))
-                market.stick = False
-                self.player.money -= market.price
-            if market.collidepoint(self.mouse) and not market.stick:
-                market.buy(self.player)
-
     def pressdown_right(self):
-        for market in self.markets:
+        for market in self.shops:
             market.stick = False
 
 
@@ -263,6 +271,7 @@ class Cell:
     def drawcell(self, window):
         window.blit(self.image_gras, (self.posx * 32, self.posy * 32))
 
+
 class Way(Cell):
     def __init__(self, size, pos, previous, next):
         super().__init__(size, pos, (205, 133, 63))
@@ -273,8 +282,8 @@ class Way(Cell):
         self.image_grade_horizontal = pygame.transform.rotate(self.image_grade_vertikal, 90)
         self.image_hoch_rechts = pygame.image.load('pictures/rechts.png')
         self.image_rechts_runter = pygame.transform.rotate(self.image_hoch_rechts, -90)
-        self.image_runter_links = pygame.transform.rotate(self.image_hoch_rechts, -180)     #rechts-hoch
-        self.image_links_hoch = pygame.transform.rotate(self.image_hoch_rechts, -270)       #runter-rechts
+        self.image_runter_links = pygame.transform.rotate(self.image_hoch_rechts, -180)  # rechts-hoch
+        self.image_links_hoch = pygame.transform.rotate(self.image_hoch_rechts, -270)  # runter-rechts
 
     def drawway(self, window):
         # grade-horizontal
@@ -298,6 +307,7 @@ class Way(Cell):
         if (self.previouscell[0] < self.posx == self.next[0]) and (self.previouscell[1] == self.posy > self.next[1]):
             window.blit(self.image_runter_links, (self.posx * 32, self.posy * 32))
 
+
 # Towerklassen
 class BananaTower:
     def __init__(self, cellsize, x, y):
@@ -311,7 +321,7 @@ class BananaTower:
         self.speed = 1 / 5
         self.activ = True
         self.cooldown = 100
-        self.towerimage = pygame.image.load('pictures/bananawarrior_ghost.png')
+        self.towerimage = pygame.image.load('pictures/bananawarrior.png')
         self.inrange = []
         self.now = self.cooldown
         self.angle = 45
@@ -367,8 +377,8 @@ class Bananaprojectile:
         self.dposx = self.tposx - (self.startposx + self.towersize / 2)
         self.progressfactor = self.speed / (math.sqrt((self.dposx * self.dposx) + (self.dposy * self.dposy)))
         self.hitted_bloon = []
-        #für schuss nach update vor draw
-        self.rot_image = pygame.transform.rotate(self.projectileimage, self.angle + 180 )
+        # für schuss nach update vor draw
+        self.rot_image = pygame.transform.rotate(self.projectileimage, self.angle + 180)
 
         if self.dposy > 0:
             self.rot_image = pygame.transform.rotate(self.projectileimage, self.angle + (
@@ -402,7 +412,7 @@ class Redbloon:
         self.cellsize = cellsize
         self.posx = x
         self.posy = y
-        self.speed = [1/30, 1/15]
+        self.speed = [1 / 30, 1 / 15]
         self.value = 1
         self.health = int(health)
         self.bloonimages = [pygame.image.load('pictures/redbloon.png'), pygame.image.load('pictures/bluebloon.png')]
@@ -414,29 +424,29 @@ class Redbloon:
 
         # oben
         if self.posx == nposx and self.posy - self.progressy >= nposy:
-            if (self.progressy - self.speed[self.health -1]) > (-1):
-                self.progressy -= self.speed[self.health -1]
+            if (self.progressy - self.speed[self.health - 1]) > (-1):
+                self.progressy -= self.speed[self.health - 1]
             else:
                 self.posy -= 1
                 self.progressy = 0
         # rechts
         elif self.posx + self.progressx <= nposx and self.posy == nposy:
-            if (self.progressx + self.speed[self.health -1]) < 1:
-                self.progressx += self.speed[self.health -1]
+            if (self.progressx + self.speed[self.health - 1]) < 1:
+                self.progressx += self.speed[self.health - 1]
             else:
                 self.posx += 1
                 self.progressx = 0
         # unten
         elif self.posx == nposx and self.posy + self.progressy <= nposy:
-            if (self.progressy + self.speed[self.health -1]) < 1:
-                self.progressy += self.speed[self.health -1]
+            if (self.progressy + self.speed[self.health - 1]) < 1:
+                self.progressy += self.speed[self.health - 1]
             else:
                 self.posy += 1
                 self.progressy = 0
         # links
         elif self.posx - self.progressx >= nposx and self.posy == nposy:
-            if (self.progressx - self.speed[self.health -1]) > -1:
-                self.progressx -= self.speed[self.health -1]
+            if (self.progressx - self.speed[self.health - 1]) > -1:
+                self.progressx -= self.speed[self.health - 1]
             else:
                 self.posx -= 1
                 self.progressx = 0
@@ -488,62 +498,6 @@ class Player:
         self.lifepoints -= damage
 
 
-# labels
-class Label:
-    def __init__(self, posx, posy, colour, text, player):
-        self.posx = posx
-        self.posy = posy
-        self.colour = colour
-        self.text = text
-        self.player = player
-        self.font = pygame.font.SysFont('Comic Sans MS', 30)
-
-    def drawlabel(self, window):
-        window.blit(self.label, (self.posx, self.posy))
-
-    def update(self, player, wave):
-        if self.text == "Lifepoints: ":
-            self.label = self.font.render(self.text + str(player.lifepoints), False, self.colour)
-        elif self.text == "Money: ":
-            self.label = self.font.render(self.text + str(player.money) + "$", False, self.colour)
-        elif self.text == "Wave: ":
-            self.label = self.font.render(self.text + str(wave.wave), False, self.colour)
-
-
-# buttons
-class Button:
-    def __init__(self, posx, posy, width, height, colour, hovercolour, text):
-        self.posx = posx
-        self.posy = posy
-        self.width = width
-        self.height = height
-        self.colour = colour
-        self.hovercolour = hovercolour
-        self.originally_colour = colour
-        self.text = text
-        self.font = pygame.font.SysFont('monospace', 50)
-        self.button = self.font.render(self.text, True, (0, 0, 0))
-        self.rect = Rect(self.posx, self.posy, self.width, self.height)
-
-    def update(self, mousecoordinates):
-        mousex, mousey = mousecoordinates
-        if (self.posx < mousex < (self.posx + self.width)) and (self.posy < mousey < (self.posy + self.height)):
-            self.colour = self.hovercolour
-        else:
-            self.colour = self.originally_colour
-
-    def drawbutton(self, window):
-        pygame.draw.rect(window, self.colour, self.rect)
-        window.blit(self.button, self.rect.topleft)
-
-    def collidepoint(self, mouse):
-        mousex, mousey = mouse
-        if (self.posx < mousex < (self.posx + self.width)) and (self.posy < mousey < (self.posy + self.height)):
-            return True
-        else:
-            return False
-
-
 class Bananamarket:
     def __init__(self, posx, posy):
         self.towersize = 2
@@ -583,6 +537,6 @@ class Bananamarket:
             self.stick = True
 
 
-#if __name__ == '__main__':
+# if __name__ == '__main__':
 game = Game()
 game.run()
