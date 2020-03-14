@@ -5,7 +5,7 @@ from UIElements.UIElement import UIElement
 
 
 class Button(UIElement):
-    def __init__(self, posx, posy, width, height, colour, hovercolour, text):
+    def __init__(self, posx, posy, width, height, colour, hovercolour, text, callback):
         super().__init__(posx, posy)
         self.width = width
         self.height = height
@@ -16,6 +16,7 @@ class Button(UIElement):
         self.font = pygame.font.SysFont('monospace', 50)
         self.button = self.font.render(self.text, True, (0, 0, 0))
         self.rect = Rect(self.posx, self.posy, self.width, self.height)
+        self.callback = callback
 
     def update(self, mousecoordinates):
         mousex, mousey = mousecoordinates
@@ -34,3 +35,6 @@ class Button(UIElement):
             return True
         else:
             return False
+
+    def execute(self):
+        self.callback()

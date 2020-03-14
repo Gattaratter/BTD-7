@@ -1,0 +1,13 @@
+import pygame
+
+
+class MapCell:
+    def __init__(self, cellsize, pos, colour=(0, 0, 0)):
+        self.posx, self.posy = pos
+        self.width = cellsize
+        self.height = cellsize
+        self.colour = colour
+        self.image_gras = pygame.image.load('pictures/gras.png')
+
+    def drawcell(self, window):
+        window.blit(self.image_gras, (self.posx * 32, self.posy * 32))
